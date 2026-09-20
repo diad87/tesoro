@@ -1,25 +1,32 @@
 # 🧭 Búsqueda del Tesoro
 
-Web tipo «Pokémon GO» para niños: cámara del móvil de fondo, flecha 3D que guía por GPS + brújula, y un cofre en realidad aumentada que aparece al llegar a cada punto. No hay servidor ni base de datos: **la partida viaja dentro del enlace**.
+Web tipo «Pokémon GO» para niños: cámara del móvil de fondo, flecha 3D que guía por GPS + brújula, y un cofre en realidad aumentada que aparece al llegar a cada punto. Los adultos preparan las búsquedas (con cuenta, guardadas en la nube) y las comparten por enlace/QR; los niños juegan sin cuenta.
 
-**Publicada en → https://diad87.github.io/tesoro/** (GitHub Pages; cada `git push` a `main` la actualiza en ~1 min)
+**Publicada en → https://tesoro-ar-app.web.app** (Firebase Hosting, proyecto `tesoro-ar-app`). La antigua URL de GitHub Pages redirige aquí.
 
-## 1. Publicarla (obligatorio: https)
+## 1. Cómo está montada
 
-La cámara, el GPS y la brújula **solo funcionan con https**. Opciones gratis, sin instalar nada:
+- `public/` → la web (HTML/CSS/JS sin build). Es lo único que se sube a Hosting.
+- **Firebase Auth** (email/contraseña y Google) para los adultos que preparan búsquedas. Los niños juegan **sin cuenta**.
+- **Firestore**, colección `games`: una búsqueda por documento (`owner`, `name`, `count`, `data`). Reglas en `firestore.rules`: leer por id es público (para jugar con el enlace); listar, crear, editar y borrar, solo el dueño.
+- Enlaces: `#j=<id>` (búsqueda guardada en la nube: enlace corto y se puede retocar después) o `#g=<datos>` (sin cuenta: toda la búsqueda va dentro del enlace).
+- `index.html` de la raíz: solo redirige los enlaces antiguos de GitHub Pages a Firebase.
 
-- **Netlify Drop** → abre https://app.netlify.com/drop y arrastra esta carpeta. Te da una URL `https://…netlify.app`.
-- **GitHub Pages** / **Cloudflare Pages** / **Vercel**: cualquiera vale, son 3 archivos estáticos (`index.html`, `style.css`, `app.js`).
+Desplegar cambios (hosting + reglas + proveedores de acceso, todo definido en `firebase.json`):
+
+```bash
+firebase deploy --project tesoro-ar-app
+```
 
 Para verla en el ordenador: `node serve.js` → http://localhost:5173 (en localhost funciona el «modo prueba», no el GPS real).
 
 ## 2. Preparar los tesoros (los mayores)
 
-1. Abre la web publicada en tu móvil → **Preparar los tesoros**. El mapa se abre **donde estés** (GPS del móvil); el botón 🎯 vuelve a centrarlo en ti. Sirve para cualquier parque, playa o barrio.
+1. Abre la web en tu móvil → **Mis búsquedas** → entra con tu cuenta (o «Seguir sin cuenta») → **Nueva búsqueda**. El mapa se abre **donde estés** (GPS del móvil); el botón 🎯 vuelve a centrarlo en ti. Sirve para cualquier parque, playa o barrio.
 2. Lo más preciso: **ve andando a cada escondite** y pulsa **«Poner tesoro donde estoy»** (mide el GPS 4 s y se queda con la mejor lectura). También puedes tocar el mapa (botón 🛰️ para vista satélite) y arrastrar los marcadores.
 3. En cada tesoro puedes escribir una **pista** (se ve mientras lo buscan) y un **mensaje al abrir el cofre** (ej.: «Mirad debajo del banco», donde habrás escondido las chuches).
 4. Ajusta la **distancia de aparición del cofre** (12 m por defecto; entre árboles el GPS falla ~10 m, súbelo a 15–20 si hace falta).
-5. **Compartir con los móviles** → QR / enlace. Ábrelo en cada móvil que vaya a jugar.
+5. **Compartir con los móviles** → QR / enlace. Ábrelo en cada móvil que vaya a jugar. Con cuenta se guarda sola («Guardado en tu cuenta ✓») y luego aparece en **Mis búsquedas** para jugarla, editarla, duplicarla o borrarla.
 
 ## 3. Jugar
 

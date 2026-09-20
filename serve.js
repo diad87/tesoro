@@ -4,8 +4,9 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const port = process.env.PORT || 5173;
 http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
-  const file = path.join(__dirname, path.normalize(rel === '/' ? '/index.html' : rel));
-  if (!file.startsWith(__dirname)) { res.writeHead(403); return res.end(); }
+  const root = path.join(__dirname, 'public');
+  const file = path.join(root, path.normalize(rel === '/' ? '/index.html' : rel));
+  if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); return res.end('404'); }
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });

@@ -1,13 +1,35 @@
 {
   "hosting": {
-    "public": ".",
-    "ignore": ["firebase.json", "firestore.rules", "firestore.indexes.json", ".firebaserc", "serve.js", "LEEME.md", "**/.*", "**/node_modules/**", "*.log"],
+    "public": "public",
+    "ignore": [
+      "**/.*",
+      "**/node_modules/**"
+    ],
     "headers": [
-      { "source": "**/*.@(html|js|css)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+      {
+        "source": "**/*.@(html|js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
     ]
   },
   "firestore": {
+    "database": "(default)",
+    "location": "eur3",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Tesoro AR",
+        "supportEmail": "i.unanue@kluppy.com"
+      }
+    }
   }
 }
