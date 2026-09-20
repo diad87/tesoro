@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -199,6 +199,8 @@
       <h3>Menú</h3>
       <button class="btn btn-ghost" id="mnSound">🔊 Sonido: sí</button>
       <p class="tip">🧭 <b>¿La flecha apunta raro?</b> Mueve el móvil en el aire dibujando un <b>8</b> unas cuantas veces y aléjalo de cosas metálicas.</p>
+      <pre class="diag" id="mnDiag"></pre>
+      <button class="btn btn-teal" id="mnCompass" hidden>🧭 Activar la brújula</button>
       <button class="btn btn-ghost hold" id="mnSkip"><span>⏭️ Dar este tesoro por encontrado</span><small>mantén pulsado 2 segundos (por si el GPS falla)</small><i></i></button>
       <button class="btn btn-ghost" id="mnExit">🚪 Salir al inicio</button>
       <button class="btn btn-gold" id="mnClose">Seguir jugando</button>
@@ -225,6 +227,6 @@
 <div id="rotateMsg"><div>📱<br>Pon el móvil en vertical</div></div>
 <div id="toast" hidden></div>
 
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

@@ -291,6 +291,7 @@ const G = {
   pos: null, acc: null, rawHeading: null, heading: null, compassSeen: false, coursePos: null, elev: 0,
   inRange: false, opening: false, paused: false, muted: false,
   watchId: null, stream: null, wake: null, raf: 0, lastT: 0, lastPing: 0, keys: new Set(),
+  W: 0, H: 0, compassSrc: '', oriCount: 0, frameCount: 0, statT: 0, oriHz: 0, fps: 0,
 };
 const el = {
   game: $('game'), cam: $('cam'), fake: $('fakeWorld'), arrowWrap: $('arrowWrap'), arrow: $('arrow'),
@@ -299,10 +300,15 @@ const el = {
   clue: $('clueText'), turn: $('turnHint'), pad: $('pad'),
 };
 const setText = (node, txt) => { if (node.textContent !== txt) node.textContent = txt; };
+// escribir en el DOM solo cuando cambia algo: el bucle va a 60 fps encima del vídeo
+const setHidden = (node, h) => { if (node.hidden !== h) node.hidden = h; };
+const setStyle = (node, prop, val) => { if (node._s === undefined) node._s = {}; if (node._s[prop] !== val) { node._s[prop] = val; node.style[prop] = val; } };
+function measure() { G.W = el.game.clientWidth; G.H = el.game.clientHeight; }
+window.addEventListener('resize', measure);
 
 function startGame(game, { demo, returnTo }) {
   if (!game || !game.stops.length) return;
-  Object.assign(G, { game, demo, returnTo, key: progKey(game), pos: null, acc: null, rawHeading: null, heading: null, compassSeen: false, coursePos: null, elev: 0, inRange: false, opening: false, paused: false });
+  Object.assign(G, { game, demo, returnTo, key: progKey(game), compassSrc: '', pos: null, acc: null, rawHeading: null, heading: null, compassSeen: false, coursePos: null, elev: 0, inRange: false, opening: false, paused: false });
   G.idx = demo ? 0 : store.get(G.key, 0);
   if (G.idx >= game.stops.length) G.idx = 0;
   $('startTitle').textContent = game.name || '¿Preparados?';
@@ -311,6 +317,7 @@ function startGame(game, { demo, returnTo }) {
   el.pad.hidden = !demo;
   updateStaticHud();
   show('game');
+  measure();
 }
 
 function updateStaticHud() {
@@ -327,18 +334,11 @@ $('btnStart').onclick = async () => {
   if (G.demo) {
     el.fake.hidden = false; el.cam.hidden = true;
     const first = G.game.stops[G.idx];
-    G.pos = moveM(first, -40, -18); G.acc = 3; G.rawHeading = 0; G.heading = 0; G.compassSeen = true;
+    G.pos = moveM(first, -40, -18); G.acc = 3; G.rawHeading = 0; G.heading = 0; G.compassSeen = true; G.compassSrc = 'simulada';
     el.gps.className = 'pill gps ok'; setText(el.gps, '🎮 Modo prueba');
   } else {
     // 1) brújula — en iPhone hay que pedir permiso dentro del toque
-    try {
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const r = await DeviceOrientationEvent.requestPermission();
-        if (r !== 'granted') toast('Sin brújula: camina y la flecha se orientará sola', 4000);
-      }
-    } catch { /* seguimos sin brújula */ }
-    window.addEventListener('deviceorientationabsolute', onOrient, true);
-    window.addEventListener('deviceorientation', onOrient, true);
+    await askCompass();
     // 2) cámara
     await startCam();
     // 3) GPS
@@ -352,6 +352,20 @@ $('btnStart').onclick = async () => {
   cancelAnimationFrame(G.raf);
   G.raf = requestAnimationFrame(frame);
 };
+
+const needsCompassPermission = () => typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+async function askCompass() {
+  try {
+    if (needsCompassPermission()) {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== 'granted') toast('Brújula sin permiso. Cierra esta pestaña de Safari, vuelve a abrir el enlace y pulsa «Permitir».', 6000);
+    }
+  } catch { /* seguimos sin brújula */ }
+  window.removeEventListener('deviceorientationabsolute', onOrient, true);
+  window.removeEventListener('deviceorientation', onOrient, true);
+  window.addEventListener('deviceorientationabsolute', onOrient, true);
+  window.addEventListener('deviceorientation', onOrient, true);
+}
 
 async function startCam() {
   try {
@@ -389,8 +403,10 @@ function onPos(p) {
   setText(el.gps, a <= 25 ? `📡 GPS ±${a} m` : `📡 GPS flojo ±${a} m · sal a cielo abierto`);
   // sin brújula: orientamos con el rumbo al caminar
   if (!G.compassSeen) {
-    if (!G.coursePos) G.coursePos = np;
-    else if (distM(G.coursePos, np) > 4) { G.rawHeading = bearing(G.coursePos, np); G.coursePos = np; }
+    const c = p.coords;
+    if (typeof c.heading === 'number' && !isNaN(c.heading) && c.speed > 0.5) { G.rawHeading = c.heading; G.coursePos = np; G.compassSrc = 'rumbo GPS'; }
+    else if (!G.coursePos) G.coursePos = np;
+    else if (distM(G.coursePos, np) > 3) { G.rawHeading = bearing(G.coursePos, np); G.coursePos = np; G.compassSrc = 'rumbo GPS'; }
   }
 }
 function onPosErr(e) {
@@ -401,13 +417,14 @@ function onPosErr(e) {
 
 function onOrient(e) {
   if (e.beta == null || e.gamma == null) return;
+  G.oriCount++;
   const b = rad(e.beta), g = rad(e.gamma);
   const cB = Math.cos(b), sB = Math.sin(b), cG = Math.cos(g), sG = Math.sin(g);
   // elevación de la cámara trasera sobre el horizonte
   G.elev = deg(Math.asin(clamp(-cB * cG, -1, 1)));
 
   if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) { // iPhone
-    G.rawHeading = e.webkitCompassHeading; G.compassSeen = true;
+    G.rawHeading = e.webkitCompassHeading; G.compassSeen = true; G.compassSrc = 'iPhone';
     return;
   }
   const absolute = e.type === 'deviceorientationabsolute' || e.absolute === true;
@@ -419,7 +436,7 @@ function onOrient(e) {
   const backE = -(cG * sA * sB + cA * sG), backN = -(sA * sG - cA * cG * sB);
   const E = topE + backE, N = topN + backN;
   if (Math.abs(E) + Math.abs(N) < 0.05) return;
-  G.rawHeading = (deg(Math.atan2(E, N)) + 360) % 360; G.compassSeen = true;
+  G.rawHeading = (deg(Math.atan2(E, N)) + 360) % 360; G.compassSeen = true; G.compassSrc = 'Android';
 }
 
 /* ---------- bucle principal ---------- */
@@ -427,7 +444,9 @@ function frame(t) {
   if (!G.running) return;
   G.raf = requestAnimationFrame(frame);
   const dt = Math.min(0.1, (t - G.lastT) / 1000); G.lastT = t;
-  const W = el.game.clientWidth, H = el.game.clientHeight;
+  const W = G.W, H = G.H;
+  G.frameCount++;
+  if (t - G.statT >= 1000) { G.fps = G.frameCount; G.oriHz = G.oriCount; G.frameCount = 0; G.oriCount = 0; G.statT = t; if (!$('ovMenu').hidden) renderDiag(); }
   const blocked = G.paused || G.opening || !$('ovFound').hidden || !$('ovWin').hidden || !$('ovMenu').hidden;
 
   if (G.demo && !blocked) {
@@ -436,11 +455,14 @@ function frame(t) {
     if (G.keys.has('up')) { const h = rad(G.rawHeading); G.pos = moveM(G.pos, Math.cos(h) * 6 * dt, Math.sin(h) * 6 * dt); }
   }
   if (G.rawHeading != null) {
-    G.heading = G.heading == null ? G.rawHeading : (G.heading + norm180(G.rawHeading - G.heading) * Math.min(1, dt * 8) + 360) % 360;
+    // suavizado adaptativo: los giros grandes se siguen casi al instante, el temblor pequeño se filtra
+    const diff = G.heading == null ? 0 : norm180(G.rawHeading - G.heading);
+    const k = Math.min(1, dt * (Math.abs(diff) > 12 ? 25 : 10));
+    G.heading = G.heading == null ? G.rawHeading : (G.heading + diff * k + 360) % 360;
   }
 
   const target = G.game.stops[G.idx];
-  if (!target || !G.pos) { el.arrowWrap.hidden = true; el.beacon.hidden = true; return; }
+  if (!target || !G.pos) { setHidden(el.arrowWrap, true); setHidden(el.beacon, true); return; }
 
   const d = distM(G.pos, target);
   const rel = G.heading == null ? null : norm180(bearing(G.pos, target) - G.heading);
@@ -454,39 +476,40 @@ function frame(t) {
   setText(el.distNum, d >= 1000 ? (d / 1000).toFixed(1) + 'k' : String(Math.round(d)));
   const heat = G.inRange ? '🎉 ¡Aquí está!' : d < 20 ? '🌋 ¡Te quemas!' : d < 40 ? '🔥 Caliente' : d < 80 ? '🌤️ Templado' : '❄️ Frío';
   setText(el.heat, heat);
-  el.heatFill.style.width = Math.round(clamp(1 - (d - radius) / 120, 0.04, 1) * 100) + '%';
+  setStyle(el.heatFill, 'width', Math.round(clamp(1 - (d - radius) / 120, 0.04, 1) * 100) + '%');
   el.game.classList.toggle('hot', d < 20 || G.inRange);
   el.game.classList.toggle('near', d >= 20 && d < 40);
 
   // flecha en el suelo
-  el.arrowWrap.hidden = rel == null || blocked || G.inRange;
-  if (rel != null) el.arrow.style.transform = `rotate(${rel.toFixed(1)}deg)`;
+  setHidden(el.arrowWrap, rel == null || blocked || G.inRange);
+  if (rel != null) setStyle(el.arrow, 'transform', `rotate(${rel.toFixed(1)}deg)`);
 
   // pista de giro
   let turn = '';
   if (rel == null) turn = G.demo ? '' : '🚶 Camina un poco para orientar la flecha';
+  else if (!G.compassSeen) turn = '🧭 Sin brújula · camina recto para orientar la flecha';
   else if (Math.abs(rel) > 135) turn = '↩️ ¡Date la vuelta!';
   else if (rel > 50) turn = 'Gira a la derecha ➡️';
   else if (rel < -50) turn = '⬅️ Gira a la izquierda';
   else if (G.inRange) turn = '¡Toca el cofre!';
-  el.turn.hidden = !turn || blocked; setText(el.turn, turn);
+  setHidden(el.turn, !turn || blocked); setText(el.turn, turn);
 
   // objetos AR
   const yAR = H / 2 + ((G.elev + 6) / V_FOV) * H;
   if (G.inRange) {
-    el.beacon.hidden = true;
-    el.chest.hidden = !$('ovFound').hidden || !$('ovWin').hidden;
+    setHidden(el.beacon, true);
+    setHidden(el.chest, !$('ovFound').hidden || !$('ovWin').hidden);
     const x = rel == null ? W / 2 : clamp(W / 2 + (rel / H_FOV) * W, 80, W - 80); // siempre tocable
     const y = clamp(yAR, H * 0.3, H * 0.52);
     const sc = clamp(1.05 - (d / radius) * 0.35, 0.65, 1.05) * Math.min(1, W / 380);
-    el.chest.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px) scale(${sc.toFixed(2)})`;
+    setStyle(el.chest, 'transform', `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px) scale(${sc.toFixed(2)})`);
   } else {
-    el.chest.hidden = true;
+    setHidden(el.chest, true);
     const vis = rel != null && Math.abs(rel) < H_FOV / 2 + 8 && !blocked;
-    el.beacon.hidden = !vis;
+    setHidden(el.beacon, !vis);
     if (vis) {
       const x = W / 2 + (rel / H_FOV) * W, y = clamp(yAR, H * 0.25, H * 0.58);
-      el.beacon.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px) scale(${clamp(28 / d, 0.45, 1.15).toFixed(2)})`;
+      setStyle(el.beacon, 'transform', `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px) scale(${clamp(28 / d, 0.45, 1.15).toFixed(2)})`);
       setText(el.beaconLabel, `${Math.round(d)} m`);
     }
   }
@@ -535,7 +558,13 @@ $('btnAgain').onclick = () => { G.idx = 0; if (!G.demo) store.set(G.key, 0); G.i
 $('btnWinHome').onclick = exitGame;
 
 /* ---------- menú ---------- */
-$('hudMenu').onclick = () => { $('ovMenu').hidden = false; };
+function renderDiag() {
+  const compass = G.compassSeen ? `✅ ${G.compassSrc} · ${G.oriHz} lecturas/s` : `❌ no llega (${G.compassSrc || 'esperando'})`;
+  $('mnDiag').textContent = `Brújula: ${compass}\nRumbo: ${G.heading == null ? '–' : Math.round(G.heading) + '°'}   Fluidez: ${G.fps} fps\nGPS: ${G.acc == null ? 'sin señal' : '±' + Math.round(G.acc) + ' m'}`;
+  $('mnCompass').hidden = G.demo || G.compassSeen;
+}
+$('mnCompass').onclick = async () => { await askCompass(); setTimeout(renderDiag, 800); };
+$('hudMenu').onclick = () => { renderDiag(); $('ovMenu').hidden = false; };
 $('mnClose').onclick = () => { $('ovMenu').hidden = true; };
 $('mnExit').onclick = () => { $('ovMenu').hidden = true; exitGame(); };
 $('mnSound').onclick = () => { G.muted = !G.muted; $('mnSound').textContent = G.muted ? '🔇 Sonido: no' : '🔊 Sonido: sí'; };
