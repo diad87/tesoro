@@ -2,6 +2,8 @@
 
 Web tipo «Pokémon GO» para niños: cámara del móvil de fondo, flecha 3D que guía por GPS + brújula, y un cofre en realidad aumentada que aparece al llegar a cada punto. No hay servidor ni base de datos: **la partida viaja dentro del enlace**.
 
+**Publicada en → https://diad87.github.io/tesoro/** (GitHub Pages; cada `git push` a `main` la actualiza en ~1 min)
+
 ## 1. Publicarla (obligatorio: https)
 
 La cámara, el GPS y la brújula **solo funcionan con https**. Opciones gratis, sin instalar nada:
