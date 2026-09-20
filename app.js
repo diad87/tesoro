@@ -2,7 +2,7 @@
 /* Búsqueda del Tesoro — web AR con GPS + brújula + cámara. Sin servidor: la partida viaja en el enlace (#g=...). */
 
 const $ = (id) => document.getElementById(id);
-const AIETE = [43.3046, -1.9906]; // centro del parque de Aiete (Donostia)
+const LS_CENTER = 'tesoro.center'; // último sitio donde se abrió el editor, para no arrancar en blanco
 const GEMS = ['💎', '👑', '🪙', '🗝️', '🔮', '⭐', '🦜', '🐚', '🧿', '🏅', '🍀', '🦄'];
 const LS_DRAFT = 'tesoro.draft';
 const LS_PROG = 'tesoro.prog.';
@@ -98,7 +98,7 @@ function refreshHome() {
   const g = playableGame();
   $('btnPlay').hidden = !g;
   $('btnDemo').hidden = !g;
-  $('homeSub').textContent = (g && g.name) || 'Parque de Aiete';
+  $('homeSub').textContent = (g && g.name) || 'Una aventura con GPS y cámara';
   const hp = $('homeProgress');
   hp.hidden = true;
   if (g) {
@@ -124,7 +124,7 @@ window.addEventListener('hashchange', () => { readUrlGame(); refreshHome(); });
 /* =====================================================================
    EDITOR (para los mayores)
    ===================================================================== */
-const ED = { map: null, layers: null, base: {}, sat: false, me: null, watchId: null, lastPos: null, collecting: null };
+const ED = { map: null, layers: null, base: {}, sat: false, me: null, watchId: null, lastPos: null, collecting: null, centered: false };
 
 function saveDraft() { store.set(LS_DRAFT, draft); }
 
@@ -145,8 +145,14 @@ async function openEditor() {
     } catch { toast('No se pudo cargar el mapa (¿sin internet?). Puedes usar el botón del GPS.', 5000); }
   }
   if (ED.map) { ED.map.invalidateSize(); drawMap(true); }
+  // sin tesoros todavía: el mapa "nace" donde esté el móvil
+  ED.centered = draft.stops.length > 0;
+  if (!ED.centered && ED.lastPos) centerOnMe();
   if (navigator.geolocation && ED.watchId == null) {
-    ED.watchId = navigator.geolocation.watchPosition(onEditorPos, () => {}, { enableHighAccuracy: true, maximumAge: 1000 });
+    if (!ED.centered) toast('📡 Buscando dónde estás…', 3000);
+    ED.watchId = navigator.geolocation.watchPosition(onEditorPos, (e) => {
+      if (e.code === 1) toast('Sin permiso de ubicación: mueve el mapa a mano hasta tu zona', 5000);
+    }, { enableHighAccuracy: true, maximumAge: 1000 });
   }
 }
 function closeEditor() {
@@ -157,7 +163,10 @@ function closeEditor() {
 
 function initMap() {
   const L = window.L;
-  ED.map = L.map('map', { zoomControl: true, maxZoom: 21 }).setView(AIETE, 17);
+  const last = store.get(LS_CENTER, null);
+  ED.map = L.map('map', { zoomControl: true, maxZoom: 21 });
+  if (last) ED.map.setView(last, 17); else ED.map.setView([40.2, -3.7], 5);
+  ED.map.on('dragstart', () => { ED.centered = true; }); // si el adulto ya mueve el mapa, no se lo quitamos de las manos
   ED.base.osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19, attribution: '© OpenStreetMap' });
   ED.base.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 21, maxNativeZoom: 19, attribution: '© Esri' });
   ED.base.osm.addTo(ED.map);
@@ -180,8 +189,17 @@ function drawMap(fit) {
   if (fit && pts.length) ED.map.fitBounds(L.latLngBounds(pts).pad(0.4), { maxZoom: 19 });
 }
 
+function centerOnMe() {
+  if (!ED.map || !ED.lastPos) return false;
+  ED.map.setView([ED.lastPos.lat, ED.lastPos.lng], 18);
+  ED.centered = true;
+  store.set(LS_CENTER, [ED.lastPos.lat, ED.lastPos.lng]);
+  return true;
+}
+
 function onEditorPos(p) {
   ED.lastPos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+  if (!ED.centered) centerOnMe();
   if (ED.collecting && (!ED.collecting.best || ED.lastPos.acc < ED.collecting.best.acc)) ED.collecting.best = ED.lastPos;
   if (ED.map) {
     const L = window.L;
@@ -238,6 +256,7 @@ function renderStops() {
 }
 
 $('edBack').onclick = closeEditor;
+$('edLocate').onclick = () => { if (!centerOnMe()) toast('Todavía no hay señal GPS. Revisa el permiso de ubicación.', 4000); };
 $('edLayer').onclick = () => {
   if (!ED.map) return;
   ED.sat = !ED.sat;

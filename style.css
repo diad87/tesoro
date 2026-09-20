@@ -60,7 +60,8 @@ input, textarea { font: inherit; color: inherit; }
 .bar-btn { width: 44px; height: 44px; border-radius: 12px; border: 0; background: rgba(255,255,255,.15); color: #fff; font-size: 1.3rem; }
 #map { height: 52vh; min-height: 280px; flex: none; background: #cfe3d0; z-index: 1; }
 .ed-mapactions { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--paper-2); flex: none; }
-.ed-hint { font-size: .9rem; opacity: .7; }
+.ed-hint { font-size: .9rem; opacity: .7; flex: 1; }
+.ed-locate { background: var(--teal-2); flex: none; }
 .ed-body { padding: 14px; max-width: 640px; width: 100%; margin: 0 auto; flex: none; padding-bottom: calc(30px + var(--safe-b)); }
 .ed-empty { background: #fff; border-radius: 14px; padding: 14px; border: 2px dashed var(--paper-2); }
 .stop-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 10px; }

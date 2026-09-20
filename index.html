@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#0b3c49">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Búsqueda del Tesoro · Aiete</title>
+<title>Búsqueda del Tesoro</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -20,7 +20,7 @@
   <div class="home-sky">
     <div class="home-compass" aria-hidden="true">🧭</div>
     <h1>Búsqueda<br>del Tesoro</h1>
-    <p class="home-sub" id="homeSub">Parque de Aiete</p>
+    <p class="home-sub" id="homeSub">Una aventura con GPS y cámara</p>
   </div>
   <div class="home-actions">
     <button class="btn btn-gold btn-xl" id="btnPlay" hidden>¡A la aventura!</button>
@@ -42,6 +42,7 @@
   <div class="ed-mapactions">
     <button class="btn btn-teal btn-sm" id="edHere">📍 Poner tesoro donde estoy</button>
     <span class="ed-hint">…o toca el mapa</span>
+    <button class="bar-btn ed-locate" id="edLocate" aria-label="Centrar el mapa en mi posición">🎯</button>
   </div>
   <div class="ed-body">
     <ol id="stopList" class="stop-list"></ol>
@@ -50,14 +51,14 @@
     <details class="ed-settings" open>
       <summary>Ajustes de la búsqueda</summary>
       <label>Nombre
-        <input type="text" id="edName" maxlength="40" placeholder="El tesoro de Aiete">
+        <input type="text" id="edName" maxlength="40" placeholder="El tesoro del parque">
       </label>
       <label>Distancia para que aparezca el cofre: <b id="edRadiusVal">12</b> m
         <input type="range" id="edRadius" min="6" max="30" step="1" value="12">
         <small>Entre árboles el GPS falla unos 10 m. Si el cofre no aparece, sube este valor.</small>
       </label>
       <label>Mensaje final (al encontrar el último)
-        <textarea id="edFinal" rows="2" maxlength="200" placeholder="¡Lo habéis conseguido! El tesoro de verdad está en la mochila de aita…"></textarea>
+        <textarea id="edFinal" rows="2" maxlength="200" placeholder="¡Lo habéis conseguido! El tesoro de verdad está en la mochila de papá…"></textarea>
       </label>
     </details>
 
@@ -227,6 +228,6 @@
 <div id="rotateMsg"><div>📱<br>Pon el móvil en vertical</div></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

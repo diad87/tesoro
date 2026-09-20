@@ -1,4 +1,4 @@
-# 🧭 Búsqueda del Tesoro (Parque de Aiete)
+# 🧭 Búsqueda del Tesoro
 
 Web tipo «Pokémon GO» para niños: cámara del móvil de fondo, flecha 3D que guía por GPS + brújula, y un cofre en realidad aumentada que aparece al llegar a cada punto. No hay servidor ni base de datos: **la partida viaja dentro del enlace**.
 
@@ -15,7 +15,7 @@ Para verla en el ordenador: `node serve.js` → http://localhost:5173 (en localh
 
 ## 2. Preparar los tesoros (los mayores)
 
-1. Abre la web publicada en tu móvil → **Preparar los tesoros**.
+1. Abre la web publicada en tu móvil → **Preparar los tesoros**. El mapa se abre **donde estés** (GPS del móvil); el botón 🎯 vuelve a centrarlo en ti. Sirve para cualquier parque, playa o barrio.
 2. Lo más preciso: **ve andando a cada escondite** y pulsa **«Poner tesoro donde estoy»** (mide el GPS 4 s y se queda con la mejor lectura). También puedes tocar el mapa (botón 🛰️ para vista satélite) y arrastrar los marcadores.
 3. En cada tesoro puedes escribir una **pista** (se ve mientras lo buscan) y un **mensaje al abrir el cofre** (ej.: «Mirad debajo del banco», donde habrás escondido las chuches).
 4. Ajusta la **distancia de aparición del cofre** (12 m por defecto; entre árboles el GPS falla ~10 m, súbelo a 15–20 si hace falta).
