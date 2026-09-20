@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Una búsqueda del tesoro. Cualquiera con el enlace (id imposible de adivinar) puede LEERLA para jugar;
+    // solo su dueño puede listarlas, crearlas, editarlas o borrarlas.
+    match /games/{id} {
+      function signedIn() { return request.auth != null; }
+      function mine() { return signedIn() && resource.data.owner == request.auth.uid; }
+      function valid() {
+        let d = request.resource.data;
+        return d.owner == request.auth.uid
+          && d.keys().hasOnly(['owner', 'name', 'count', 'data', 'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() <= 60
+          && d.count is int && d.count >= 0 && d.count <= 200
+          && d.data is string && d.data.size() <= 40000;
+      }
+      allow get: if true;
+      allow list: if mine();
+      allow create: if signedIn() && valid();
+      allow update: if mine() && valid();
+      allow delete: if mine();
+    }
+  }
+}

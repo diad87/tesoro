@@ -6,6 +6,7 @@ const LS_CENTER = 'tesoro.center'; // último sitio donde se abrió el editor, p
 const GEMS = ['💎', '👑', '🪙', '🗝️', '🔮', '⭐', '🦜', '🐚', '🧿', '🏅', '🍀', '🦄'];
 const LS_DRAFT = 'tesoro.draft';
 const LS_PROG = 'tesoro.prog.';
+const LS_CACHE = 'tesoro.cache.'; // copia local de las búsquedas de la nube ya abiertas (por si falla la red en el parque)
 const H_FOV = 55, V_FOV = 68; // campo de visión aproximado de la cámara trasera en vertical (grados)
 
 /* ---------- utilidades geo ---------- */
@@ -77,10 +78,35 @@ function loadCss(href) {
    INICIO
    ===================================================================== */
 let urlGame = null; // partida que viene en el enlace
-let draft = store.get(LS_DRAFT, null) || { name: '', radius: 12, final: '', stops: [] };
+let urlLoading = false;
+const emptyGame = () => ({ name: '', radius: 12, final: '', stops: [] });
+let draft = store.get(LS_DRAFT, null) || emptyGame(); // la búsqueda que se está editando
+let draftId = null; // null = borrador local de este móvil; si no, id del documento en la nube
+
+// Los jugadores leen la búsqueda por REST (lectura pública): así los móviles de los niños no cargan el SDK de Firebase
+async function fetchCloudGame(id) {
+  const cfg = window.FIREBASE_CONFIG;
+  if (!cfg) throw new Error('sin-config');
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/games/${encodeURIComponent(id)}?key=${cfg.apiKey}`);
+  if (!r.ok) throw new Error('http-' + r.status);
+  const doc = await r.json();
+  return doc.fields.data.stringValue;
+}
 
 function readUrlGame() {
   urlGame = null;
+  const j = location.hash.match(/j=([\w-]+)/);
+  if (j) {
+    const id = j[1];
+    const use = (data) => { const g = decodeGame(data); g._pid = id; if (g.stops.length) urlGame = g; };
+    try { const cached = store.get(LS_CACHE + id, null); if (cached) use(cached); } catch { /* caché corrupta */ }
+    urlLoading = !urlGame;
+    fetchCloudGame(id)
+      .then((data) => { use(data); store.set(LS_CACHE + id, data); })
+      .catch((e) => { if (!urlGame) toast(e.message === 'http-404' ? 'Esta búsqueda ya no existe 😕' : 'No se pudo cargar la búsqueda. ¿Hay internet?', 5000); })
+      .finally(() => { urlLoading = false; refreshHome(); });
+    return;
+  }
   const m = location.hash.match(/g=([\w-]+)/);
   if (!m) return;
   try {
@@ -92,13 +118,14 @@ function playableGame() {
   if (urlGame) return urlGame;
   return draft.stops.length ? draft : null;
 }
-function progKey(g) { return LS_PROG + hashStr(encodeGame(g)); }
+// el progreso de una búsqueda en la nube va por id: si el adulto la retoca a media partida, los niños no vuelven a empezar
+function progKey(g) { return LS_PROG + (g._pid ? 'j.' + g._pid : hashStr(encodeGame(g))); }
 
 function refreshHome() {
   const g = playableGame();
   $('btnPlay').hidden = !g;
   $('btnDemo').hidden = !g;
-  $('homeSub').textContent = (g && g.name) || 'Una aventura con GPS y cámara';
+  $('homeSub').textContent = urlLoading ? 'Cargando la búsqueda…' : (g && g.name) || 'Una aventura con GPS y cámara';
   const hp = $('homeProgress');
   hp.hidden = true;
   if (g) {
@@ -118,7 +145,7 @@ function refreshHome() {
 
 $('btnPlay').onclick = () => startGame(playableGame(), { demo: false, returnTo: 'home' });
 $('btnDemo').onclick = () => startGame(playableGame(), { demo: true, returnTo: 'home' });
-$('btnEdit').onclick = () => openEditor();
+$('btnEdit').onclick = () => (window.FIREBASE_CONFIG ? openLibrary() : openEditor());
 window.addEventListener('hashchange', () => { readUrlGame(); refreshHome(); });
 
 /* =====================================================================
@@ -126,12 +153,14 @@ window.addEventListener('hashchange', () => { readUrlGame(); refreshHome(); });
    ===================================================================== */
 const ED = { map: null, layers: null, base: {}, sat: false, me: null, watchId: null, lastPos: null, collecting: null, centered: false };
 
-function saveDraft() { store.set(LS_DRAFT, draft); }
+function saveDraft() { if (draftId) cloudSaveSoon(); else store.set(LS_DRAFT, draft); }
 
 async function openEditor() {
   // si se abre desde un enlace compartido y no hay borrador propio, se edita esa partida
-  if (urlGame && !draft.stops.length) { draft = JSON.parse(JSON.stringify(urlGame)); saveDraft(); }
+  if (!draftId && urlGame && !draft.stops.length) { draft = JSON.parse(JSON.stringify(urlGame)); delete draft._pid; saveDraft(); }
   show('editor');
+  $('edStatus').textContent = draftId ? 'Guardado en tu cuenta ✓' : 'Borrador en este móvil';
+  $('edClear').textContent = draftId ? 'Quitar todos los tesoros' : 'Borrar todo y empezar de cero';
   $('edName').value = draft.name;
   $('edRadius').value = draft.radius;
   $('edRadiusVal').textContent = draft.radius;
@@ -155,8 +184,9 @@ async function openEditor() {
     }, { enableHighAccuracy: true, maximumAge: 1000 });
   }
 }
-function closeEditor() {
+async function closeEditor() {
   if (ED.watchId != null) { navigator.geolocation.clearWatch(ED.watchId); ED.watchId = null; }
+  if (window.FIREBASE_CONFIG) { await cloudLeaveEditor(); return openLibrary(); }
   refreshHome();
   show('home');
 }
@@ -268,8 +298,8 @@ $('edName').oninput = (e) => { draft.name = e.target.value; saveDraft(); };
 $('edFinal').oninput = (e) => { draft.final = e.target.value; saveDraft(); };
 $('edRadius').oninput = (e) => { draft.radius = +e.target.value; $('edRadiusVal').textContent = draft.radius; saveDraft(); drawMap(false); };
 $('edClear').onclick = () => {
-  if (!confirm('¿Borrar todos los tesoros de este borrador?')) return;
-  draft = { name: '', radius: 12, final: '', stops: [] };
+  if (!confirm('¿Borrar todos los tesoros de esta búsqueda?')) return;
+  if (draftId) draft.stops = []; else draft = emptyGame();
   saveDraft(); openEditor();
 };
 $('edTest').onclick = () => {
@@ -280,7 +310,13 @@ $('edTest').onclick = () => {
 /* ---------- compartir ---------- */
 $('edShare').onclick = async () => {
   if (!draft.stops.length) return toast('Pon al menos un tesoro en el mapa');
-  const url = location.origin + location.pathname + '#g=' + encodeGame(draft);
+  if (draftId) await cloudFlush();
+  shareGame(draft, draftId);
+};
+let shareTitle = '';
+async function shareGame(game, id) {
+  const url = location.origin + location.pathname + (id ? '#j=' + id : '#g=' + encodeGame(game));
+  shareTitle = game.name || 'Búsqueda del tesoro';
   $('shareUrl').value = url;
   $('shLocalWarn').hidden = !(location.protocol === 'file:' || /^(localhost|127\.|192\.168\.|10\.)/.test(location.hostname));
   $('shNative').hidden = !navigator.share;
@@ -294,12 +330,12 @@ $('edShare').onclick = async () => {
     qr.make();
     qrBox.innerHTML = qr.createImgTag(4, 8);
   } catch { qrBox.textContent = 'QR no disponible (enlace demasiado largo o sin internet). Usa «Copiar» o «Enviar».'; qrBox.style.lineHeight = '1.3'; }
-};
+}
 $('shCopy').onclick = async () => {
   try { await navigator.clipboard.writeText($('shareUrl').value); } catch { $('shareUrl').select(); document.execCommand('copy'); }
   toast('Enlace copiado ✅');
 };
-$('shNative').onclick = () => navigator.share({ title: draft.name || 'Búsqueda del tesoro', text: '¡Búsqueda del tesoro! Abre el enlace con el móvil:', url: $('shareUrl').value }).catch(() => {});
+$('shNative').onclick = () => navigator.share({ title: shareTitle, text: '¡Búsqueda del tesoro! Abre el enlace con el móvil:', url: $('shareUrl').value }).catch(() => {});
 $('shClose').onclick = () => { $('ovShare').hidden = true; };
 
 /* =====================================================================
@@ -410,7 +446,7 @@ function exitGame() {
   window.removeEventListener('deviceorientation', onOrient, true);
   if (G.wake) { G.wake.release().catch(() => {}); G.wake = null; }
   G.keys.clear();
-  if (G.returnTo === 'editor') openEditor(); else { refreshHome(); show('home'); }
+  if (G.returnTo === 'editor') openEditor(); else if (G.returnTo === 'library') openLibrary(); else { refreshHome(); show('home'); }
 }
 
 /* ---------- sensores ---------- */

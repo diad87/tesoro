@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -25,9 +25,52 @@
   <div class="home-actions">
     <button class="btn btn-gold btn-xl" id="btnPlay" hidden>¡A la aventura!</button>
     <p class="home-progress" id="homeProgress" hidden></p>
-    <button class="btn btn-teal" id="btnEdit">🗺️ Preparar los tesoros <small>(mayores)</small></button>
+    <button class="btn btn-teal" id="btnEdit">🗺️ Mis búsquedas <small>(mayores)</small></button>
     <button class="btn btn-ghost" id="btnDemo" hidden>🎮 Probar sin moverme</button>
     <p class="warn" id="httpsWarn" hidden>⚠️ La cámara y el GPS solo funcionan si la web se abre con <b>https://</b></p>
+  </div>
+</section>
+
+<!-- ============ MIS BÚSQUEDAS (cuenta) ============ -->
+<section id="library" class="screen">
+  <header class="bar">
+    <button class="bar-btn" id="libBack" aria-label="Volver">←</button>
+    <h2>Mis búsquedas</h2>
+    <span class="bar-spacer"></span>
+  </header>
+  <div class="lib-body">
+    <p class="lib-note" id="libLoading">Cargando…</p>
+
+    <div id="libAuth" hidden>
+      <div class="auth-card">
+        <h3>Entra para guardar tus búsquedas</h3>
+        <p>Con una cuenta puedes tener varias búsquedas, editarlas desde cualquier móvil y compartirlas con un enlace corto. Los niños <b>no</b> necesitan cuenta para jugar.</p>
+        <button class="btn btn-ghost" id="auGoogle"><span class="g-logo">G</span> Continuar con Google</button>
+        <div class="auth-sep"><span>o con tu email</span></div>
+        <form id="auForm" autocomplete="on">
+          <input type="email" id="auEmail" placeholder="Email" autocomplete="username" required>
+          <input type="password" id="auPass" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="current-password" minlength="6" required>
+          <p class="auth-err" id="auErr" hidden></p>
+          <div class="row">
+            <button class="btn btn-teal" type="submit" id="auLogin">Entrar</button>
+            <button class="btn btn-gold" type="button" id="auRegister">Crear cuenta</button>
+          </div>
+        </form>
+        <button class="btn-link" id="auReset">He olvidado la contraseña</button>
+      </div>
+      <button class="btn-link" id="auSkip">Seguir sin cuenta (se guarda solo en este móvil)</button>
+    </div>
+
+    <div id="libMain" hidden>
+      <div class="lib-account"><span id="libUser"></span><button class="btn-link" id="libLogout">Cerrar sesión</button></div>
+      <button class="btn btn-gold" id="libNew">＋ Nueva búsqueda</button>
+      <div class="lib-card lib-draft" id="libDraft" hidden>
+        <div class="lib-card-head"><b>📱 Borrador en este móvil</b><span id="libDraftInfo"></span></div>
+        <div class="lib-card-actions"><button class="btn btn-teal btn-sm" id="libDraftUp">☁️ Guardar en mi cuenta</button><button class="btn btn-ghost btn-sm" id="libDraftEdit">✏️ Editar</button></div>
+      </div>
+      <ul class="lib-list" id="libList"></ul>
+      <p class="ed-empty" id="libEmpty" hidden>Todavía no tienes búsquedas guardadas. Pulsa <b>«Nueva búsqueda»</b> para preparar la primera.</p>
+    </div>
   </div>
 </section>
 
@@ -35,7 +78,7 @@
 <section id="editor" class="screen">
   <header class="bar">
     <button class="bar-btn" id="edBack" aria-label="Volver">←</button>
-    <h2>Preparar los tesoros</h2>
+    <h2>Preparar los tesoros<small id="edStatus"></small></h2>
     <button class="bar-btn" id="edLayer" aria-label="Cambiar mapa">🛰️</button>
   </header>
   <div id="map"></div>
@@ -228,6 +271,8 @@
 <div id="rotateMsg"><div>📱<br>Pon el móvil en vertical</div></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=3"></script>
+<script src="firebase-config.js?v=4"></script>
+<script src="app.js?v=4"></script>
+<script src="cloud.js?v=4"></script>
 </body>
 </html>
