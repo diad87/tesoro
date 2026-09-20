@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Roboto:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -27,6 +27,7 @@
     <p class="home-progress" id="homeProgress" hidden></p>
     <button class="btn btn-teal" id="btnEdit">🗺️ Mis búsquedas <small>(mayores)</small></button>
     <button class="btn btn-ghost" id="btnDemo" hidden>🎮 Probar sin moverme</button>
+    <p class="home-legal">Juego de búsqueda del tesoro con realidad aumentada para niños · <a href="privacidad.html">Privacidad</a></p>
     <p class="warn" id="httpsWarn" hidden>⚠️ La cámara y el GPS solo funcionan si la web se abre con <b>https://</b></p>
   </div>
 </section>
@@ -80,6 +81,7 @@
       </div>
       <ul class="lib-list" id="libList"></ul>
       <p class="ed-empty" id="libEmpty" hidden>Todavía no tienes búsquedas guardadas. Pulsa <b>«Nueva búsqueda»</b> para preparar la primera.</p>
+      <p class="lib-legal"><a href="privacidad.html">Privacidad</a> · <button class="btn-link danger-link" id="libDelete">Eliminar mi cuenta</button></p>
     </div>
   </div>
 </section>
@@ -281,8 +283,8 @@
 <div id="rotateMsg"><div>📱<br>Pon el móvil en vertical</div></div>
 <div id="toast" hidden></div>
 
-<script src="firebase-config.js?v=5"></script>
-<script src="app.js?v=5"></script>
-<script src="cloud.js?v=5"></script>
+<script src="firebase-config.js?v=6"></script>
+<script src="app.js?v=6"></script>
+<script src="cloud.js?v=6"></script>
 </body>
 </html>

@@ -28,7 +28,11 @@
       "emailPassword": true,
       "googleSignIn": {
         "oAuthBrandDisplayName": "Tesoro AR",
-        "supportEmail": "i.unanue@kluppy.com"
+        "supportEmail": "i.unanue@kluppy.com",
+        "authorizedRedirectUris": [
+          "https://tesoro-ar-app.firebaseapp.com/__/auth/handler",
+          "https://tesoro-ar-app.web.app/__/auth/handler"
+        ]
       }
     }
   }

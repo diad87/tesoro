@@ -4,7 +4,8 @@ window.FIREBASE_CONFIG = {
   projectId: 'tesoro-ar-app',
   appId: '1:430551227178:web:14985180b2f3ede4bb5c53',
   apiKey: 'AIzaSyDYiZFFHPBji1fZuYLrk7fM25ufidVfbeI',
-  authDomain: 'tesoro-ar-app.firebaseapp.com',
+  // mismo dominio que la web: la ventana de Google muestra este dominio (no *.firebaseapp.com) y el acceso por redirección funciona en Safari
+  authDomain: 'tesoro-ar-app.web.app',
   storageBucket: 'tesoro-ar-app.firebasestorage.app',
   messagingSenderId: '430551227178',
 };

@@ -156,6 +156,19 @@ window.addEventListener('pagehide', () => { if (Cloud.dirty) cloudFlush(); });
 /* ---------- botones ---------- */
 $('libBack').onclick = () => { refreshHome(); show('home'); };
 $('libLogout').onclick = () => Cloud.auth.signOut();
+$('libDelete').onclick = async () => {
+  if (!confirm('¿Eliminar tu cuenta y TODAS tus búsquedas? Los enlaces compartidos dejarán de funcionar. No se puede deshacer.')) return;
+  // Firebase solo deja borrar la cuenta con un inicio de sesión reciente: lo comprobamos ANTES de borrar nada
+  if (Date.now() - new Date(Cloud.user.metadata.lastSignInTime).getTime() > 4 * 60 * 1000) {
+    return toast('Por seguridad: pulsa «Cerrar sesión», vuelve a entrar y repite «Eliminar mi cuenta».', 7000);
+  }
+  try {
+    const snap = await Cloud.db.collection('games').where('owner', '==', Cloud.user.uid).get();
+    await Promise.all(snap.docs.map((d) => d.ref.delete()));
+    await Cloud.user.delete();
+    toast('Cuenta y búsquedas eliminadas', 4000);
+  } catch (e) { console.error(e); toast('No se pudo eliminar la cuenta. Cierra sesión, vuelve a entrar e inténtalo otra vez.', 6000); }
+};
 $('libNew').onclick = async () => {
   try {
     const game = emptyGame();
