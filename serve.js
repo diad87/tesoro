@@ -5,7 +5,9 @@ const port = process.env.PORT || 5173;
 http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
   const root = path.join(__dirname, 'public');
-  const file = path.join(root, path.normalize(rel === '/' ? '/index.html' : rel));
+  // igual que cleanUrls de Firebase Hosting: /privacy -> privacy.html
+  const clean = rel === '/' ? '/index.html' : path.extname(rel) ? rel : rel + '.html';
+  const file = path.join(root, path.normalize(clean));
   if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); return res.end('404'); }
